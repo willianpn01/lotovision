@@ -42,8 +42,8 @@ Uma aplicação web interativa para análise estatística de resultados de loter
 
 ```bash
 # Clonar repositório
-git clone https://github.com/seu-usuario/lottoanalytics.git
-cd lottoanalytics
+git clone https://github.com/willianpn01/lotovision.git
+cd lotovision
 
 # Instalar dependências
 pip install -r requirements.txt
@@ -55,21 +55,24 @@ streamlit run app.py
 ## 📁 Estrutura do Projeto
 
 ```
-lottoanalytics/
+lotovision/
 ├── app.py                     # Aplicação principal Streamlit
 ├── data/
-│   ├── mega_sena_demo.xlsx    # Dados Mega Sena
-│   ├── quina_demo.xlsx        # Dados Quina
-│   └── lotofacil_demo.xlsx    # Dados Lotofácil
+│   ├── mega_sena.json         # Histórico Mega Sena
+│   ├── quina.json             # Histórico Quina
+│   └── lotofacil.json         # Histórico Lotofácil
 ├── modules/
 │   ├── game_config.py         # Configurações dos jogos
-│   ├── data_loader_v2.py      # Upload e processamento (multi-jogo)
-│   ├── analytics_v2.py        # Análises e KPIs (multi-jogo)
-│   ├── statistics_v2.py       # Validações estatísticas (multi-jogo)
-│   └── generator_v2.py        # Gerador de jogos (multi-jogo)
+│   ├── json_loader.py         # Carregamento de dados JSON
+│   ├── api_loader.py          # Sincronização com API da Caixa
+│   ├── analytics_v2.py        # Análises e KPIs
+│   ├── statistics_v2.py       # Validações estatísticas
+│   └── generator_v2.py        # Gerador de jogos
 ├── utils/
 │   ├── validators.py          # Validações de integridade
 │   └── export.py              # Exportação PDF/Excel
+├── .streamlit/
+│   └── config.toml            # Configurações do Streamlit
 ├── requirements.txt
 └── README.md
 ```
@@ -107,27 +110,28 @@ lottoanalytics/
 - PDF com relatório
 - Texto para copiar/colar
 
-## 📋 Formato dos Dados
+## 📋 Dados
 
-O arquivo Excel deve conter:
+Os dados históricos são armazenados em arquivos JSON locais:
 
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| Concurso | Integer | ID do sorteio |
-| Data | Date | Data do sorteio |
-| Bola1-BolaN | Integer | Dezenas sorteadas |
+```json
+{
+  "game": "mega_sena",
+  "last_update": "2025-12-03",
+  "total_contests": 2946,
+  "results": [
+    {"concurso": 1, "data": "11/03/1996", "dezenas": [4, 5, 30, 33, 41, 52]},
+    ...
+  ]
+}
+```
 
-### Colunas por Jogo
+### Atualização
 
-| Jogo | Colunas | Range |
-|------|---------|-------|
-| Mega Sena | Bola1-Bola6 | 1-60 |
-| Quina | Bola1-Bola5 | 1-80 |
-| Lotofácil | Bola1-Bola15 | 1-25 |
-
-> O sistema detecta automaticamente o tipo de jogo pelo número de colunas de bolas.
-
-> **Validação**: Ao selecionar um jogo, o sistema rejeita arquivos incompatíveis.
+O sistema sincroniza automaticamente com a API da Caixa:
+- Clique em **⬇️ Atualizar da Caixa** na sidebar
+- Apenas concursos novos são adicionados
+- Dados ficam disponíveis offline
 
 ## 🛠️ Stack Tecnológica
 
@@ -154,13 +158,13 @@ Jogue com responsabilidade. Este software não incentiva
 apostas compulsivas.
 ```
 
-## � Links Úteis
+## 🔗 Links Úteis
 
 **Loterias Caixa**: [https://loterias.caixa.gov.br](https://loterias.caixa.gov.br/Paginas/default.aspx)
 
 Todas as informações oficiais sobre os jogos, resultados, regras e premiações podem ser encontradas no site oficial da Caixa Econômica Federal.
 
-## �📄 Licença
+## � Licença
 
 MIT License
 
@@ -170,5 +174,5 @@ LotoVision Team - Ferramenta Educacional
 
 ---
 
-**Versão**: 2.0 (Multi-Jogos)  
-**Última Atualização**: Dezembro 2024
+**Versão**: 1.0  
+**Última Atualização**: Dezembro 2025
