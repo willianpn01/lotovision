@@ -81,6 +81,16 @@ def json_to_dataframe(data: Dict, game_config: GameConfig) -> pd.DataFrame:
     if 'Data' in df.columns:
         df['Data'] = pd.to_datetime(df['Data'], format='%d/%m/%Y', errors='coerce')
     
+    # Calcula colunas derivadas
+    ball_cols = [f'Bola_{i}' for i in range(1, game_config.n_balls + 1)]
+    existing_cols = [c for c in ball_cols if c in df.columns]
+    
+    if existing_cols:
+        # Soma das dezenas
+        df['Soma'] = df[existing_cols].sum(axis=1)
+        # Quantidade de pares
+        df['Pares'] = df[existing_cols].apply(lambda row: sum(1 for x in row if x % 2 == 0), axis=1)
+    
     # Ordena por concurso
     df = df.sort_values('Concurso').reset_index(drop=True)
     
@@ -215,7 +225,7 @@ def import_from_excel(game_slug: str, excel_path: str) -> Tuple[bool, str]:
         return False, f"Erro: {e}"
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=300)  # Cache de 5 minutos
 def load_game_from_json(game_slug: str) -> Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame], str]:
     """
     Carrega dados do jogo a partir do JSON

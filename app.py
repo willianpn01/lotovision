@@ -41,7 +41,7 @@ st.set_page_config(
     page_title="LotoVision - Análise de Loterias",
     page_icon="🎰",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="auto"  # Auto-collapse on mobile
 )
 
 # ============================================
@@ -49,10 +49,11 @@ st.set_page_config(
 # ============================================
 st.markdown("""
 <style>
+    /* Mobile-first responsive design */
     .main-header {
-        padding: 20px;
+        padding: 15px;
         border-radius: 10px;
-        margin-bottom: 20px;
+        margin-bottom: 15px;
         color: white;
         text-align: center;
     }
@@ -63,7 +64,7 @@ st.markdown("""
     
     .kpi-card {
         background: #1E2130;
-        padding: 20px;
+        padding: 15px;
         border-radius: 10px;
         border-left: 4px solid #6C63FF;
         margin-bottom: 10px;
@@ -72,30 +73,30 @@ st.markdown("""
     .disclaimer-box {
         background: #2D1F1F;
         border: 1px solid #FF4444;
-        padding: 15px;
+        padding: 12px;
         border-radius: 8px;
-        margin: 20px 0;
+        margin: 15px 0;
     }
     
     .game-card {
         background: #1E2130;
-        padding: 15px;
+        padding: 12px;
         border-radius: 10px;
-        margin: 10px 0;
+        margin: 8px 0;
         border: 1px solid #333;
     }
     
     .number-ball {
         display: inline-block;
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         color: white;
         text-align: center;
-        line-height: 36px;
+        line-height: 32px;
         font-weight: bold;
         margin: 2px;
-        font-size: 14px;
+        font-size: 13px;
     }
     
     .ball-mega { background: linear-gradient(135deg, #209869 0%, #1a7a54 100%); }
@@ -103,9 +104,80 @@ st.markdown("""
     .ball-lotofacil { background: linear-gradient(135deg, #930089 0%, #6b0064 100%); }
     
     .game-tab {
-        padding: 10px 20px;
+        padding: 8px 15px;
         border-radius: 8px;
         margin: 2px;
+    }
+    
+    /* Mobile menu hint */
+    .mobile-menu-hint {
+        display: none;
+        background: linear-gradient(135deg, #6C63FF 0%, #4834d4 100%);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 25px;
+        text-align: center;
+        margin: 10px auto 20px;
+        font-weight: bold;
+        animation: pulse 2s infinite;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(108, 99, 255, 0.4);
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+        100% { transform: scale(1); }
+    }
+    
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+        .mobile-menu-hint {
+            display: block;
+        }
+        .main-header {
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .main-header h1 {
+            font-size: 1.4rem !important;
+        }
+        .kpi-card {
+            padding: 10px;
+        }
+        .number-ball {
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
+            font-size: 12px;
+            margin: 1px;
+        }
+        .game-card {
+            padding: 10px;
+            margin: 5px 0;
+        }
+        /* Reduce sidebar width on mobile */
+        section[data-testid="stSidebar"] {
+            width: 280px !important;
+        }
+        /* Better touch targets */
+        button {
+            min-height: 44px !important;
+        }
+        /* Compact tables */
+        .stDataFrame {
+            font-size: 12px !important;
+        }
+    }
+    
+    /* Tablet */
+    @media (min-width: 769px) and (max-width: 1024px) {
+        .number-ball {
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            font-size: 13px;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -143,7 +215,15 @@ init_session_state()
 # MODAL DE BOAS-VINDAS
 # ============================================
 def show_welcome_modal():
-    """Mostra modal de boas-vindas"""
+    """Mostra modal de boas-vindas apenas na primeira visita"""
+    # Verifica se já aceitou (via query param persistente)
+    params = st.query_params
+    already_accepted = params.get("accepted") == "1"
+    
+    if already_accepted:
+        st.session_state.first_visit = False
+        return
+    
     if st.session_state.first_visit:
         with st.expander("👋 Bem-vindo ao LotoVision!", expanded=True):
             st.markdown("""
@@ -165,6 +245,7 @@ def show_welcome_modal():
             
             if st.button("✅ Li e Concordo", type="primary", key="welcome_btn"):
                 st.session_state.first_visit = False
+                st.query_params["accepted"] = "1"  # Persiste na URL
                 st.rerun()
 
 
@@ -192,38 +273,24 @@ def render_sidebar():
         
         game_config = GAMES[selected]
         
+        # Carrega dados automaticamente se ainda não carregou
+        if not st.session_state.get(f'{selected}_loaded', False):
+            df, df_melted, status = load_game_from_json(selected)
+            if df is not None:
+                st.session_state[f'{selected}_df'] = df
+                st.session_state[f'{selected}_df_melted'] = df_melted
+                st.session_state[f'{selected}_loaded'] = True
+        
         st.markdown("---")
         
-        # Dados
-        st.markdown(f"### 📁 Dados - {game_config.name}")
-        st.caption(f"{game_config.n_balls} bolas de 1 a {game_config.max_number}")
-        
-        # Botões de ação
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📂 Carregar", key=f"load_{selected}", width="stretch"):
-                df, df_melted, status = load_game_from_json(selected)
-                if df is not None:
-                    st.session_state[f'{selected}_df'] = df
-                    st.session_state[f'{selected}_df_melted'] = df_melted
-                    st.session_state[f'{selected}_loaded'] = True
-                    st.success(status)
-                else:
-                    st.warning(status)
-        
-        with col2:
-            if st.button("🔄 Limpar", key=f"clear_{selected}", width="stretch"):
-                st.session_state[f'{selected}_df'] = None
-                st.session_state[f'{selected}_df_melted'] = None
-                st.session_state[f'{selected}_loaded'] = False
-                st.rerun()
-        
-        # Status dos dados JSON
+        # Status dos dados
+        st.markdown(f"### 📁 {game_config.name}")
         json_stats = get_json_stats(selected)
         if json_stats['total'] > 0:
-            st.caption(f"📁 {json_stats['total']} concursos (#{json_stats['primeiro']}-#{json_stats['ultimo']})")
+            st.success(f"✅ {json_stats['total']:,} concursos")
+            st.caption(f"#{json_stats['primeiro']} a #{json_stats['ultimo']}")
         else:
-            st.caption("📁 Nenhum dado local")
+            st.warning("Nenhum dado disponível")
         
         # Sincronização com API
         st.markdown("---")
@@ -323,6 +390,7 @@ def render_header(df: pd.DataFrame, game_config: GameConfig):
 def render_frequency_charts(df_melted: pd.DataFrame, game_config: GameConfig):
     """Renderiza gráficos de frequência"""
     st.markdown("### 📊 Frequência de Dezenas")
+    st.caption("Top 10 dezenas mais e menos sorteadas no período selecionado.")
     
     top_mais, top_menos = get_frequency_analysis(df_melted)
     
@@ -375,6 +443,7 @@ def render_frequency_charts(df_melted: pd.DataFrame, game_config: GameConfig):
 def render_heatmap(df_melted: pd.DataFrame, game_config: GameConfig):
     """Renderiza heatmap do volante"""
     st.markdown("### 🔥 Heatmap do Volante")
+    st.caption("Visualização da frequência de cada dezena no formato do volante oficial.")
     
     heatmap_data = get_heatmap_data(df_melted, game_config)
     labels = get_heatmap_labels(game_config)
@@ -418,6 +487,7 @@ def render_heatmap(df_melted: pd.DataFrame, game_config: GameConfig):
 def render_parity_chart(df: pd.DataFrame, game_config: GameConfig):
     """Renderiza gráfico de paridade"""
     st.markdown("### ⚖️ Distribuição Par/Ímpar")
+    st.caption("Proporção de números pares e ímpares em cada sorteio.")
     
     parity = get_parity_distribution(df, game_config)
     
@@ -440,6 +510,7 @@ def render_parity_chart(df: pd.DataFrame, game_config: GameConfig):
 def render_delay_analysis(df: pd.DataFrame, df_melted: pd.DataFrame, game_config: GameConfig):
     """Renderiza tabela de atrasos"""
     st.markdown("### ⏱️ Análise de Atraso")
+    st.caption("Dezenas há mais tempo sem aparecer. Atraso acima da média não indica maior chance.")
     
     delays = get_delay_analysis(df, df_melted, game_config)
     
@@ -464,6 +535,7 @@ def render_delay_analysis(df: pd.DataFrame, df_melted: pd.DataFrame, game_config
 def render_frequent_pairs(df: pd.DataFrame, game_config: GameConfig):
     """Renderiza pares frequentes"""
     st.markdown("### 🔗 Duplas Frequentes")
+    st.caption("Combinações de duas dezenas que mais aparecem juntas nos sorteios.")
     
     pairs = get_frequent_pairs(df, game_config)
     
@@ -948,9 +1020,19 @@ def render_generator(df: pd.DataFrame, df_melted: pd.DataFrame, game_config: Gam
         n_jogos = st.number_input("Quantidade", min_value=1, max_value=100, value=5,
                                    key=f"gen_qty_{game_config.slug}")
         
-        st.markdown("#### 🚫 Exclusões")
-        exclude_last = st.checkbox("Excluir último sorteio", key=f"gen_last_{game_config.slug}")
-        exclude_top = st.checkbox("Excluir top 10", key=f"gen_top_{game_config.slug}")
+        # Exclusões - só mostra se fizer sentido para o jogo
+        # Lotofácil tem 15 de 25, excluir muito não deixa números suficientes
+        exclude_last = False
+        exclude_top = False
+        
+        if game_config.max_number - game_config.n_balls >= 20:  # Mega Sena, Quina
+            st.markdown("#### 🚫 Exclusões")
+            exclude_last = st.checkbox("Excluir último sorteio", 
+                                       help=f"Remove as {game_config.n_balls} dezenas do último concurso",
+                                       key=f"gen_last_{game_config.slug}")
+            exclude_top = st.checkbox("Excluir top 10 números", 
+                                       help="Remove os 10 números mais sorteados",
+                                       key=f"gen_top_{game_config.slug}")
         
         st.markdown("#### ⚖️ Balanceamento")
         n_balls = game_config.n_balls
@@ -978,13 +1060,26 @@ def render_generator(df: pd.DataFrame, df_melted: pd.DataFrame, game_config: Gam
             except:
                 st.warning("Formato inválido")
         
+        st.markdown("#### 🎯 Estratégia")
         strategy = st.radio(
-            "Estratégia",
+            "Escolha a estratégia",
             options=["random", "balanced", "contrarian"],
-            format_func=lambda x: {"random": "🎲 Aleatório", "balanced": "⚖️ Balanceado", 
-                                   "contrarian": "🔄 Contrarian"}[x],
-            key=f"gen_strat_{game_config.slug}"
+            format_func=lambda x: {
+                "random": "🎲 Aleatório", 
+                "balanced": "⚖️ Balanceado", 
+                "contrarian": "🔄 Atrasados"
+            }[x],
+            key=f"gen_strat_{game_config.slug}",
+            label_visibility="collapsed"
         )
+        
+        # Tooltip explicativo da estratégia selecionada
+        strategy_help = {
+            "random": "Seleção puramente aleatória, sem nenhum critério estatístico.",
+            "balanced": "Mistura números 'quentes' (frequentes) e 'frios' (raros) de forma equilibrada.",
+            "contrarian": "Prioriza números atrasados (há mais tempo sem sair). Não aumenta chances reais."
+        }
+        st.caption(f"ℹ️ {strategy_help[strategy]}")
         
         gen_btn = st.button("🎯 GERAR", type="primary", width="stretch",
                             key=f"gen_btn_{game_config.slug}")
@@ -1008,12 +1103,21 @@ def render_generator(df: pd.DataFrame, df_melted: pd.DataFrame, game_config: Gam
                     max_sum=max_s,
                     fixed_numbers=fixed
                 )
-                st.session_state[games_key] = games
+                if games:
+                    st.session_state[games_key] = games
+                else:
+                    st.warning("Não foi possível gerar jogos com os filtros selecionados. Tente ajustar os parâmetros.")
         
         if st.session_state[games_key]:
             games = st.session_state[games_key]
             
-            ball_class = f"ball-{game_config.slug.replace('_', '')}"
+            # Mapeia slug para classe CSS correta
+            ball_class_map = {
+                "mega_sena": "ball-mega",
+                "quina": "ball-quina", 
+                "lotofacil": "ball-lotofacil"
+            }
+            ball_class = ball_class_map.get(game_config.slug, "ball-mega")
             
             for i, game in enumerate(games, 1):
                 numbers_html = " ".join([f'<span class="number-ball {ball_class}">{n:02d}</span>' 
@@ -1189,11 +1293,18 @@ def main():
         <div style="text-align: center; padding: 100px 20px;">
             <h1>{game_config.icon} LotoVision</h1>
             <h3>Análise Estatística - {game_config.name}</h3>
-            <p>Carregue um arquivo Excel ou use os dados de demonstração.</p>
-            <p>👈 Use a barra lateral</p>
+            <p>⏳ Carregando dados...</p>
         </div>
         """, unsafe_allow_html=True)
+        st.rerun()  # Recarrega para pegar os dados
         return
+    
+    # Dica para abrir menu no mobile
+    st.markdown("""
+    <div class="mobile-menu-hint">
+        ☰ Toque aqui ou no canto superior esquerdo para trocar de jogo
+    </div>
+    """, unsafe_allow_html=True)
     
     # Aplica filtro de data
     date_key = f'{selected}_date_filter'
@@ -1216,7 +1327,6 @@ def main():
         render_frequency_charts(df_melted, game_config)
         render_delay_analysis(df, df_melted, game_config)
         render_frequent_pairs(df, game_config)
-        render_temporal_trend(df, df_melted, game_config)
     
     with tabs[1]:
         render_statistics(df, df_melted, game_config)

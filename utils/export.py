@@ -12,23 +12,24 @@ import base64
 
 
 def games_to_dataframe(games: List) -> pd.DataFrame:
-    """Converte lista de jogos para DataFrame"""
+    """Converte lista de jogos para DataFrame (suporta qualquer quantidade de dezenas)"""
+    if not games:
+        return pd.DataFrame()
+    
     data = []
     for i, game in enumerate(games, 1):
-        row = {
-            'Jogo': i,
-            'Dezena 1': game.numbers[0],
-            'Dezena 2': game.numbers[1],
-            'Dezena 3': game.numbers[2],
-            'Dezena 4': game.numbers[3],
-            'Dezena 5': game.numbers[4],
-            'Dezena 6': game.numbers[5],
-            'Soma': game.sum_value,
-            'Pares': game.evens,
-            'Ímpares': game.odds,
-            'Atrasados': game.delayed_count,
-            'Compatibilidade': f"{game.compatibility_score:.0f}%"
-        }
+        row = {'Jogo': i}
+        
+        # Adiciona dezenas dinamicamente
+        for j, num in enumerate(game.numbers, 1):
+            row[f'Dezena {j}'] = num
+        
+        row['Soma'] = game.sum_value
+        row['Pares'] = game.evens
+        row['Ímpares'] = game.odds
+        row['Atrasados'] = game.delayed_count
+        row['Compatibilidade'] = f"{game.compatibility_score:.0f}%"
+        
         data.append(row)
     return pd.DataFrame(data)
 
