@@ -109,25 +109,14 @@ st.markdown("""
         margin: 2px;
     }
     
-    /* Mobile menu hint */
+    /* Mobile menu hint - subtle text */
     .mobile-menu-hint {
         display: none;
-        background: linear-gradient(135deg, #6C63FF 0%, #4834d4 100%);
-        color: white;
-        padding: 12px 20px;
-        border-radius: 25px;
+        color: #FAEF2D;
+        font-size: 13px;
         text-align: center;
-        margin: 10px auto 20px;
-        font-weight: bold;
-        animation: pulse 2s infinite;
-        cursor: pointer;
-        box-shadow: 0 4px 15px rgba(108, 99, 255, 0.4);
-    }
-    
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.02); }
-        100% { transform: scale(1); }
+        padding: 8px;
+        margin-bottom: 10px;
     }
     
     /* Mobile optimizations */
@@ -1302,7 +1291,7 @@ def main():
     # Dica para abrir menu no mobile
     st.markdown("""
     <div class="mobile-menu-hint">
-        ☰ Toque aqui ou no canto superior esquerdo para trocar de jogo
+        ☰ Menu no canto superior esquerdo
     </div>
     """, unsafe_allow_html=True)
     
